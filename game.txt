@@ -1,0 +1,138 @@
+#pip install pygame
+#OR
+#python -m venv venv
+#venv\bin\python -m pip install pygame
+
+
+import pygame
+import random
+import sys
+import time
+
+
+pygame.init()
+
+
+WIDTH, HEIGHT = 500, 700
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Color Match Rush")
+
+
+COLORS = {
+    "red": (255, 0, 0),
+    "green": (0, 200, 0),
+    "blue": (0, 0, 255),
+    "yellow": (255, 215, 0)
+}
+
+
+font = pygame.font.SysFont("Arial", 32, bold=True)
+
+circle_color = random.choice(list(COLORS.keys()))
+circle_y = 0
+speed = 3
+score = 0
+lives = 3
+
+ACCESSIBLE_MODE = True
+
+
+def draw_buttons():
+    
+    button_width = WIDTH // 4
+    for i, color_name in enumerate(COLORS):
+        x = i * button_width
+        pygame.draw.rect(screen, COLORS[color_name], (x, HEIGHT - 100, button_width, 100))
+        
+        
+        if ACCESSIBLE_MODE:
+            text = font.render(color_name[0].upper(), True, (255, 255, 255))
+            screen.blit(text, (x + button_width//2 - text.get_width()//2, HEIGHT - 70))
+
+
+def draw_circle(color_name, y_pos):
+    
+    color = COLORS[color_name]
+    x = WIDTH // 2
+    radius = 40
+    
+    if ACCESSIBLE_MODE:
+        
+        if color_name == "red":
+            pygame.draw.rect(screen, color, (x - 40, y_pos - 40, 80, 80), border_radius=12)
+        elif color_name == "green":
+            pygame.draw.polygon(screen, color, [(x, y_pos - 50), (x - 40, y_pos + 40), (x + 40, y_pos + 40)])
+        elif color_name == "blue":
+            pygame.draw.circle(screen, color, (x, y_pos), radius)
+        elif color_name == "yellow":
+            pygame.draw.ellipse(screen, color, (x - 50, y_pos - 30, 100, 60))
+    else:
+        pygame.draw.circle(screen, color, (x, y_pos), radius)
+
+
+clock = pygame.time.Clock()
+
+while True:
+    screen.fill((30, 30, 30))  # Dark background for better contrast
+    draw_buttons()
+    draw_circle(circle_color, circle_y)
+
+    
+    score_text = font.render(f"Score: {score}", True, (255, 255, 255))
+    lives_text = font.render(f"Lives: {lives}", True, (255, 255, 255))
+    screen.blit(score_text, (20, 20))
+    screen.blit(lives_text, (WIDTH - 150, 20))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+    
+    circle_y += speed
+
+    
+    if circle_y > HEIGHT - 120:
+        lives -= 1
+        if lives == 0:
+            screen.fill((0, 0, 0))
+            game_over_text = font.render("Game Over!", True, (255, 0, 0))
+            screen.blit(game_over_text, (WIDTH//2 - 100, HEIGHT//2))
+            pygame.display.flip()
+            time.sleep(2)
+            pygame.quit()
+            sys.exit()
+        
+        
+        circle_color = random.choice(list(COLORS.keys()))
+        circle_y = 0
+
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+        
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:
+                chosen = "red"
+            elif event.key == pygame.K_g:
+                chosen = "green"
+            elif event.key == pygame.K_b:
+                chosen = "blue"
+            elif event.key == pygame.K_y:
+                chosen = "yellow"
+            else:
+                chosen = None
+
+            
+            if chosen == circle_color:
+                score += 1
+                speed += 0.2  # Progressive difficulty
+                circle_color = random.choice(list(COLORS.keys()))
+                circle_y = 0
+            elif chosen is not None:
+                lives -= 1
+
+
+
+
