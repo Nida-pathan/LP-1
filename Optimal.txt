@@ -1,0 +1,183 @@
+
+ref_string = []
+current_pages = []
+hit = 0
+miss = 0
+window = 0
+
+
+def count_elements(arr):
+    c = 0
+    for _ in arr:
+        c += 1
+    return c
+
+
+def find_optimal(current_index, window, total_pages):
+    farthest = current_index
+    replace_index = -1
+
+    i = 0
+    while i < window:
+        page = current_pages[i]
+        found = False
+        j = current_index + 1
+
+        while j < total_pages:
+            if ref_string[j] == page:
+                found = True
+                if j > farthest:
+                    farthest = j
+                    replace_index = i
+                break
+            j += 1
+
+        # If this page is never used again
+        if not found:
+            return i
+        i += 1
+
+    if replace_index != -1:
+        return replace_index
+    return 0
+
+
+
+def optimal():
+    global hit, miss, current_pages
+
+    hit = 0
+    miss = 0
+    current_pages = []
+    i = 0
+    while i < window:
+        current_pages.insert(i, -1)
+        i += 1
+
+    total_pages = count_elements(ref_string)
+    current_index = 0
+
+    while current_index < total_pages:
+        page = ref_string[current_index]
+        hit_flag = False
+
+        
+        j = 0
+        while j < window:
+            if current_pages[j] == page:
+                hit_flag = True
+                hit += 1
+                break
+            j += 1
+
+        
+        if not hit_flag:
+            miss += 1
+            empty_found = False
+
+            
+            j = 0
+            while j < window:
+                if current_pages[j] == -1:
+                    current_pages[j] = page
+                    empty_found = True
+                    break
+                j += 1
+
+            
+            if not empty_found:
+                replace_idx = find_optimal(current_index, window, total_pages)
+                current_pages[replace_idx] = page
+
+        current_index += 1
+
+
+        print("Step", current_index, "=> Frames:", end=" ")
+        j = 0
+        while j < window:
+            print(current_pages[j], end="  ")
+            j += 1
+        print()
+
+    
+    print("\n OPTIMAL PAGE REPLACEMENT ")
+    print("Total Page References:", total_pages)
+    print("Total Hits:", hit)
+    print("Total Misses:", miss)
+    hit_ratio = hit / total_pages
+    miss_ratio = miss / total_pages
+    print("Hit Ratio:", round(hit_ratio, 2))
+    print("Miss Ratio:", round(miss_ratio, 2))
+
+
+def input_reference_string():
+    global ref_string
+    ref_string = []
+
+    print("\nEnter number of page references: ", end="")
+    n = int(input())
+    i = 0
+    while i < n:
+        print("Enter page number", i + 1, ":", end=" ")
+        num = int(input())
+        length = 0
+        for _ in ref_string:
+            length += 1
+        ref_string.insert(length, num)
+        i += 1
+
+def display_reference_string():
+    global ref_string
+    print("\nReference String: ", end="")
+    total = count_elements(ref_string)
+    i = 0
+    while i < total:
+        print(ref_string[i], end="  ")
+        i += 1
+    print()
+
+
+def input_frames():
+    global window
+    print("\nEnter number of frames: ", end="")
+    window = int(input())
+
+
+
+def main():
+    global window
+    while True:
+        print("\n==============================")
+        print(" OPTIMAL PAGE REPLACEMENT MENU ")
+        print("==============================")
+        print("1. Enter Reference String")
+        print("2. Enter Number of Frames")
+        print("3. Display Reference String")
+        print("4. Simulate Optimal Algorithm")
+        print("5. Exit")
+        print("==============================")
+        print("Enter your choice: ", end="")
+        choice = int(input())
+
+        if choice == 1:
+            input_reference_string()
+        elif choice == 2:
+            input_frames()
+        elif choice == 3:
+            display_reference_string()
+        elif choice == 4:
+            if window == 0:
+                print(" Please enter number of frames first.")
+            elif count_elements(ref_string) == 0:
+                print(" Please enter reference string first.")
+            else:
+                optimal()
+        elif choice == 5:
+            print("Exiting program...")
+            break
+        else:
+            print("Invalid choice! Try again.")
+
+
+if __name__ == "__main__":
+    main()
