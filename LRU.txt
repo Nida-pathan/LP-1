@@ -1,0 +1,168 @@
+
+
+class LRU_PageReplacement:
+    def __init__(self):
+        self.ref_string = []
+        self.frames = []
+        self.last_used = []   
+        self.window = 0
+        self.hit = 0
+        self.miss = 0
+
+    
+    def count_elements(self, arr):
+        c = 0
+        for _ in arr:
+            c += 1
+        return c
+
+    def input_reference_string(self):
+        print("\nEnter number of page references: ", end="")
+        n = int(input())
+        self.ref_string = []
+        i = 0
+        while i < n:
+            print("Enter page number", i + 1, ":", end=" ")
+            page = int(input())
+            size = 0
+            for _ in self.ref_string:
+                size += 1
+            self.ref_string.insert(size, page)
+            i += 1
+
+
+    def input_frames(self):
+        print("\nEnter number of frames: ", end="")
+        self.window = int(input())
+
+    
+    def find_LRU(self):
+        min_index = 0
+        i = 1
+        size = self.count_elements(self.last_used)
+        while i < size:
+            if self.last_used[i] < self.last_used[min_index]:
+                min_index = i
+            i += 1
+        return min_index
+
+    
+    def simulate_LRU(self):
+        self.hit = 0
+        self.miss = 0
+        self.frames = []
+        self.last_used = []
+
+        
+        i = 0
+        while i < self.window:
+            self.frames.insert(i, -1)
+            self.last_used.insert(i, -1)
+            i += 1
+
+        total_refs = self.count_elements(self.ref_string)
+        current_time = 0
+
+        while current_time < total_refs:
+            page = self.ref_string[current_time]
+            hit_flag = False
+
+            
+            j = 0
+            while j < self.window:
+                if self.frames[j] == page:
+                    hit_flag = True
+                    self.hit += 1
+                    self.last_used[j] = current_time
+                    break
+                j += 1
+
+            
+            if not hit_flag:
+                self.miss += 1
+                empty_found = False
+                j = 0
+                while j < self.window:
+                    if self.frames[j] == -1:
+                        self.frames[j] = page
+                        self.last_used[j] = current_time
+                        empty_found = True
+                        break
+                    j += 1
+
+                
+                if not empty_found:
+                    lru_index = self.find_LRU()
+                    self.frames[lru_index] = page
+                    self.last_used[lru_index] = current_time
+
+            
+            print("Step", current_time + 1, "=> Frames:", end=" ")
+            k = 0
+            while k < self.window:
+                print(self.frames[k], end="  ")
+                k += 1
+            print()
+
+            current_time += 1
+
+        
+        print("\n----- LRU PAGE REPLACEMENT -----")
+        print("Total References:", total_refs)
+        print("Total Hits:", self.hit)
+        print("Total Misses:", self.miss)
+        hit_ratio = self.hit / total_refs
+        miss_ratio = self.miss / total_refs
+        print("Hit Ratio:", round(hit_ratio, 2))
+        print("Miss Ratio:", round(miss_ratio, 2))
+
+    
+    def display_reference_string(self):
+        print("\nReference String:", end=" ")
+        i = 0
+        total = self.count_elements(self.ref_string)
+        while i < total:
+            print(self.ref_string[i], end="  ")
+            i += 1
+        print()
+
+
+
+def main():
+    sim = LRU_PageReplacement()
+
+    while True:
+        print("\n==============================")
+        print(" LRU PAGE REPLACEMENT MENU")
+        print("==============================")
+        print("1. Enter Reference String")
+        print("2. Enter Number of Frames")
+        print("3. Display Reference String")
+        print("4. Simulate LRU Algorithm")
+        print("5. Exit")
+        print("==============================")
+        print("Enter your choice: ", end="")
+        choice = int(input())
+
+        if choice == 1:
+            sim.input_reference_string()
+        elif choice == 2:
+            sim.input_frames()
+        elif choice == 3:
+            sim.display_reference_string()
+        elif choice == 4:
+            if sim.window == 0:
+                print(" Please enter frame size first.")
+            elif sim.count_elements(sim.ref_string) == 0:
+                print(" Please enter reference string first.")
+            else:
+                sim.simulate_LRU()
+        elif choice == 5:
+            print("Exiting program...")
+            break
+        else:
+            print("Invalid choice! Try again.")
+
+
+if __name__ == "__main__":
+    main()
