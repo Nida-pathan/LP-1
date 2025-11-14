@@ -1,0 +1,430 @@
+OPTAB = {
+    "STOP": ("IS", 0, 1),
+    "ADD": ("IS", 1, 1),
+    "SUB": ("IS", 2, 1),
+    "MULT": ("IS", 3, 1),
+    "MOVER": ("IS", 4, 1),
+    "MOVEM": ("IS", 5, 1),
+    "COMP": ("IS", 6, 1),
+    "BC": ("IS", 7, 1),
+    "DIV": ("IS", 8, 1),
+    "READ": ("IS", 9, 1),
+    "PRINT": ("IS", 10, 1),
+
+    "START": ("AD", 1, 0),
+    "END": ("AD", 2, 0),
+    "LTORG": ("AD", 3, 0),
+    "ORIGIN": ("AD", 4, 0),
+    "EQU": ("AD", 5, 0),
+
+    "DC": ("DL", 1, 1),
+    "DS": ("DL", 2, 0)  # DS length variable
+}
+
+REGISTERS = {
+    "AREG": 1,
+    "BREG": 2,
+    "CREG": 3,
+    "DREG": 4
+}
+
+SYMTAB = {}   
+SYMTAB_COUNTER = 0
+LITTAB = []   
+POOLTAB = [0] 
+IC = []       
+LOCCTR = 0
+PASS_ONE_COMPLETE = False
+
+def parse_line(line):
+    return line.replace(",", " ").upper().split()
+
+def find_in_symtab(symbol):
+    if symbol in SYMTAB:
+        return SYMTAB[symbol]["index"], SYMTAB[symbol]
+    return -1, None
+
+def add_to_symtab(symbol, address=-1, length=1):
+    global SYMTAB_COUNTER
+    if symbol in SYMTAB:
+        return SYMTAB[symbol]["index"]
+    idx = SYMTAB_COUNTER
+    SYMTAB[symbol] = {"address": address, "length": length, "index": idx}
+    SYMTAB_COUNTER += 1
+    return idx
+
+def find_in_littab(literal):
+    for i in range(len(LITTAB)):
+        if LITTAB[i][0] == literal:
+            return i, LITTAB[i]
+    return -1, None
+
+def add_to_littab(literal):
+    LITTAB.append([literal, -1])
+    return len(LITTAB) - 1
+
+def evaluate_expression(expression):
+    expression = expression.strip()
+    if expression.isdigit():
+        return int(expression), (("C", int(expression)),)
+    op = None
+    if '+' in expression:
+        parts = expression.split('+', 1)
+        op = '+'
+    elif '-' in expression:
+        parts = expression.split('-', 1)
+        op = '-'
+    else:
+        parts = [expression]
+
+    sym = parts[0]
+    const = 0
+    if len(parts) > 1:
+        try:
+            const = int(parts[1])
+        except:
+            # if not numeric, treat as 0 (caller can catch)
+            const = 0
+
+    sym_index, sym_entry = find_in_symtab(sym)
+    if sym_index == -1:
+        sym_index = add_to_symtab(sym, -1, -1)
+        sym_entry = SYMTAB[sym]
+
+    if sym_entry["address"] == -1:
+        # address unknown now; return placeholder ic tuple; caller must decide if that's allowed
+        if op == '+':
+            return None, (("S", sym_index), ("C", const))
+        elif op == '-':
+            return None, (("S", sym_index), ("C", -const))
+        else:
+            return None, (("S", sym_index),)
+    else:
+        base = sym_entry["address"]
+        if op == '+':
+            return base + const, (("S", sym_index), ("C", const))
+        elif op == '-':
+            return base - const, (("S", sym_index), ("C", -const))
+        else:
+            return base, (("S", sym_index),)
+
+def parse_operand(operand_str):
+    if not operand_str:
+        return None
+    operand_str = operand_str.strip()
+    if operand_str.startswith("="):
+        idx, _ = find_in_littab(operand_str)
+        if idx == -1:
+            idx = add_to_littab(operand_str)
+        return ("L", idx)
+    if operand_str in REGISTERS:
+        return ("R", REGISTERS[operand_str])
+    if operand_str.isdigit():
+        return ("C", int(operand_str))
+    sym_index, _ = find_in_symtab(operand_str)
+    if sym_index == -1:
+        sym_index = add_to_symtab(operand_str, -1, -1)  # forward ref
+    return ("S", sym_index)
+
+def process_literals():
+    global LOCCTR, LITTAB, POOLTAB, IC
+    pool_start = POOLTAB[-1]
+    any_processed = False
+    for i in range(pool_start, len(LITTAB)):
+        if LITTAB[i][1] == -1:
+            LITTAB[i][1] = LOCCTR
+            lit = LITTAB[i][0]
+            const_str = lit
+            if const_str.startswith('='):
+                const_str = const_str[1:]
+            if (const_str.startswith('"') and const_str.endswith('"')) or (const_str.startswith("'") and const_str.endswith("'")):
+                const_str = const_str[1:-1]
+            try:
+                const_val = int(const_str)
+            except:
+                const_val = 0
+            IC.append((LOCCTR, ("DL", 1), ("C", const_val)))
+            LOCCTR += 1
+            any_processed = True
+    if any_processed:
+        POOLTAB.append(len(LITTAB))
+
+def print_tables():
+    print("\n--- Pass-I Output ---")
+    print(f"\nFinal LOCCTR: {LOCCTR}")
+
+    print("\n--- Intermediate Code (IC) ---")
+    print("LOC\t(CLASS,OP)\t\tOP1\t\tOP2")
+    print("-" * 60)
+    for entry in IC:
+        loc = entry[0]
+        clsop = entry[1]
+        op1 = entry[2] if len(entry) > 2 else ""
+        op2 = entry[3] if len(entry) > 3 else ""
+        loc_str = str(loc) if loc is not None else "-"
+        print(f"{loc_str}\t{clsop}\t{op1}\t{op2}")
+
+    print("\n--- Symbol Table (SYMTAB) ---")
+    print("Index\tSymbol\tAddress\tLength")
+    print("-" * 40)
+    # iterate by index (sorted)
+    # build reverse map index->symbol
+    rev = {}
+    for sym, data in SYMTAB.items():
+        rev[data["index"]] = sym
+    for idx in sorted(rev.keys()):
+        sym = rev[idx]
+        data = SYMTAB[sym]
+        print(f"{idx}\t{sym}\t{data['address']}\t{data['length']}")
+
+    print("\n--- Literal Table (LITTAB) ---")
+    print("Index\tLiteral\tAddress")
+    print("-" * 30)
+    for i in range(len(LITTAB)):
+        print(f"{i}\t{LITTAB[i][0]}\t{LITTAB[i][1]}")
+
+    print("\n--- Pool Table (POOLTAB) ---")
+    print("Pool#\tLITTAB StartIndex")
+    print("-" * 30)
+    for i in range(len(POOLTAB)):
+        print(f"{i}\t{POOLTAB[i]}")
+
+def perform_pass_one(assembly_code):
+    global LOCCTR, SYMTAB, LITTAB, POOLTAB, IC, SYMTAB_COUNTER, PASS_ONE_COMPLETE
+    SYMTAB = {}
+    SYMTAB_COUNTER = 0
+    LITTAB = []
+    POOLTAB = [0]
+    IC = []
+    LOCCTR = 0
+    PASS_ONE_COMPLETE = False
+
+    start_seen = False
+
+    for line_number, line in enumerate(assembly_code, start=1):
+        tokens = parse_line(line)
+        if not tokens:
+            continue
+
+        current_loc = LOCCTR
+        label = None
+
+        if tokens[0] not in OPTAB:
+            label_tok = tokens[0]
+            label = label_tok
+            idx, entry = find_in_symtab(label)
+            if idx != -1:
+                if entry["address"] != -1:
+                    print(f"Error (line {line_number}): Symbol '{label}' redefined.")
+                    return False
+                else:
+                    entry["address"] = current_loc
+            else:
+                add_to_symtab(label, current_loc, 1)
+            tokens = tokens[1:]
+            if not tokens:
+                continue
+
+        mnemonic = tokens[0]
+        if mnemonic not in OPTAB:
+            print(f"Error (line {line_number}): Invalid mnemonic '{mnemonic}'.")
+            return False
+
+        op_class, op_code, op_len = OPTAB[mnemonic]
+
+        if mnemonic == "START":
+            if start_seen:
+                print(f"Error (line {line_number}): Multiple START directives.")
+                return False
+            if len(tokens) < 2:
+                print(f"Error (line {line_number}): START requires an address.")
+                return False
+            try:
+                LOCCTR = int(tokens[1])
+            except:
+                print(f"Error (line {line_number}): Invalid START address '{tokens[1]}'.")
+                return False
+            start_seen = True
+            IC.append((None, ("AD", 1), ("C", LOCCTR)))
+            continue
+
+        if not start_seen:
+            print("Error: START directive not found before code.")
+            return False
+        if mnemonic == "END":
+            process_literals()
+            IC.append((current_loc, ("AD", 2)))
+            break
+
+        if mnemonic == "LTORG":
+            process_literals()
+            IC.append((current_loc, ("AD", 3)))
+            continue
+
+        if mnemonic == "ORIGIN":
+            if len(tokens) < 2:
+                print(f"Error (line {line_number}): ORIGIN requires expression.")
+                return False
+            new_addr, expr_ic = evaluate_expression(tokens[1])
+            if new_addr is None:
+                print(f"Error (line {line_number}): ORIGIN expression references undefined symbol.")
+                return False
+            LOCCTR = new_addr
+            IC.append((current_loc, ("AD", 4),) + expr_ic)
+            continue
+
+        if mnemonic == "EQU":
+            if not label:
+                print(f"Error (line {line_number}): EQU must be used with a label.")
+                return False
+            if len(tokens) < 2:
+                print(f"Error (line {line_number}): EQU requires expression.")
+                return False
+            new_addr, expr_ic = evaluate_expression(tokens[1])
+            if new_addr is None:
+                print(f"Error (line {line_number}): EQU expression references undefined symbol.")
+                return False
+            idx, entry = find_in_symtab(label)
+            if idx == -1:
+                add_to_symtab(label, new_addr, 1)
+            else:
+                entry["address"] = new_addr
+            IC.append((current_loc, ("AD", 5),) + expr_ic)
+            continue
+
+        if op_class == "DL":
+            if mnemonic == "DC":
+                if len(tokens) < 2:
+                    print(f"Error (line {line_number}): DC requires a constant.")
+                    return False
+                const_token = tokens[1]
+                if (const_token.startswith("'") and const_token.endswith("'")) or (const_token.startswith('"') and const_token.endswith('"')):
+                    const_token = const_token[1:-1]
+                try:
+                    const_val = int(const_token)
+                except:
+                    print(f"Error (line {line_number}): DC constant '{tokens[1]}' is not numeric.")
+                    return False
+
+                if label:
+                    idx, entry = find_in_symtab(label)
+                    if idx == -1:
+                        add_to_symtab(label, current_loc, 1)
+                    else:
+                        entry["address"] = current_loc
+                        entry["length"] = 1
+                IC.append((current_loc, ("DL", 1), ("C", const_val)))
+                LOCCTR += 1
+                continue
+
+            if mnemonic == "DS":
+                if len(tokens) < 2:
+                    print(f"Error (line {line_number}): DS requires a size.")
+                    return False
+                try:
+                    size = int(tokens[1])
+                except:
+                    print(f"Error (line {line_number}): DS size '{tokens[1]}' invalid.")
+                    return False
+                if label:
+                    idx, entry = find_in_symtab(label)
+                    if idx == -1:
+                        add_to_symtab(label, current_loc, size)
+                    else:
+                        entry["address"] = current_loc
+                        entry["length"] = size
+                IC.append((current_loc, ("DL", 2), ("C", size)))
+                LOCCTR += size
+                continue
+
+        if op_class == "IS":
+            # Build operand tuples
+            op1 = None
+            op2 = None
+            if len(tokens) > 1:
+                op1 = parse_operand(tokens[1])
+            if len(tokens) > 2:
+                op2 = parse_operand(tokens[2])
+
+            components = [current_loc, (op_class, op_code)]
+            if op1 is not None:
+                components.append(op1)
+            if op2 is not None:
+                components.append(op2)
+            IC.append(tuple(components))
+            LOCCTR += op_len
+            continue
+
+        print(f"Error (line {line_number}): Unsupported mnemonic category for '{mnemonic}'.")
+        return False
+
+    PASS_ONE_COMPLETE = True
+    return True
+
+def main():
+    global PASS_ONE_COMPLETE
+    assembly_buffer = []
+
+    while True:
+        print("\n--- Pass-I Assembler Menu ---")
+        print("1. Enter Assembly Code")
+        print("2. Run Pass-I")
+        print("3. Display Results & Tables")
+        print("4. Exit")
+        choice = input("Enter choice (1-4): ").strip()
+
+        if choice == '1':
+            assembly_buffer = []
+            PASS_ONE_COMPLETE = False
+            print("Enter assembly lines. Type 'END' on a new line to finish input.")
+            while True:
+                try:
+                    line = input()
+                except EOFError:
+                    break
+                assembly_buffer.append(line)
+                if line.strip().upper() == "END":
+                    break
+            print("Assembly code stored.")
+
+        elif choice == '2':
+            if not assembly_buffer:
+                print("No assembly code entered. Choose option 1 first.")
+                continue
+            ok = perform_pass_one(assembly_buffer)
+            if ok:
+                print("Pass-I completed successfully.")
+            else:
+                print("Pass-I failed. See errors above.")
+                PASS_ONE_COMPLETE = False
+
+        elif choice == '3':
+            if not PASS_ONE_COMPLETE:
+                print("Pass-I not successfully completed yet. Run option 2 first.")
+                continue
+            print_tables()
+
+        elif choice == '4':
+            print("Exiting.")
+            break
+
+        else:
+            print("Invalid choice. Try 1-4.")
+
+if __name__ == "__main__":
+    main()
+
+
+"""
+START 300
+READ A
+MOVER BREG, ='1'
+LOOP ADD BREG, ='1'
+MOVEM BREG, A
+COMP BREG, A
+BC LT, LOOP
+PRINT A
+STOP
+A DS 1
+END
+"""
