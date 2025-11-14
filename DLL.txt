@@ -140,5 +140,37 @@ javac -h . MathOperations.java
 g++ -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/Linux" -shared -o libMathOps.so MathOps.cpp
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 export LD_LIBRARY_PATH=.
+java MathOperations
 
 """
+
+
+1)
+java -version
+javac -version
+sudo apt install openjdk-17-jdk
+
+2.)
+ echo $JAVA_HOME
+if empty set manually	export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+			export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+			export PATH=$PATH:$JAVA_HOME/bin
+
+
+3)
+$JAVA_HOME/include
+$JAVA_HOME/include/linux
+
+
+4)
+g++ --version
+sudo apt install g++
+ 
+
+5)
+chmod +x libMathOps.so
+
+6)
+echo $LD_LIBRARY_PATH
+
+
