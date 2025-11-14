@@ -1,0 +1,181 @@
+
+
+class Process:
+    def __init__(self, pid, arrival, burst):
+        self.pid = pid
+        self.arrival = arrival
+        self.burst = burst
+        self.remaining = burst
+        self.completion = 0
+        self.waiting = 0
+        self.turnaround = 0
+
+
+
+def count_elements(arr):
+    c = 0
+    for _ in arr:
+        c += 1
+    return c
+
+
+
+def round_robin(processes, quantum):
+    n = count_elements(processes)
+    completed = 0
+    current_time = 0
+    gantt = []
+    visited = []
+    queue = []
+
+    
+    i = 0
+    while i < n:
+        visited.insert(i, False)
+        i += 1
+
+    
+    while completed != n:
+        
+        i = 0
+        while i < n:
+            if processes[i].arrival <= current_time and visited[i] == False:
+                queue_length = count_elements(queue)
+                queue.insert(queue_length, i)
+                visited[i] = True
+            i += 1
+
+        
+        q_len = count_elements(queue)
+        if q_len == 0:
+            gantt_length = count_elements(gantt)
+            gantt.insert(gantt_length, -1)
+            current_time += 1
+            continue
+
+        
+        front_index = queue[0]
+        temp_queue = []
+        i = 1
+        while i < q_len:
+            temp_queue.insert(i - 1, queue[i])
+            i += 1
+        queue = temp_queue
+
+        p = processes[front_index]
+
+        
+        exec_time = quantum
+        if p.remaining < quantum:
+            exec_time = p.remaining
+
+        
+        k = 0
+        while k < exec_time:
+            gantt_length = count_elements(gantt)
+            gantt.insert(gantt_length, p.pid)
+            k += 1
+
+        current_time += exec_time
+        p.remaining = p.remaining - exec_time
+
+        
+        j = 0
+        while j < n:
+            if processes[j].arrival <= current_time and visited[j] == False:
+                q_len2 = count_elements(queue)
+                queue.insert(q_len2, j)
+                visited[j] = True
+            j += 1
+
+        if p.remaining == 0:
+            completed += 1
+            p.completion = current_time
+        else:
+            # Re-insert process at end of queue
+            q_len3 = count_elements(queue)
+            queue.insert(q_len3, front_index)
+
+    
+    i = 0
+    while i < n:
+        p = processes[i]
+        p.turnaround = p.completion - p.arrival
+        p.waiting = p.turnaround - p.burst
+        i += 1
+
+    
+    print("\n ROUND ROBIN (Preemptive) ")
+    print("Gantt Chart:")
+    g_len = count_elements(gantt)
+    i = 0
+    while i < g_len:
+        if gantt[i] == -1:
+            print("Idle | ", end="")
+        else:
+            print("P" + str(gantt[i]) + " | ", end="")
+        i += 1
+
+    print("\n\nPID\tArrival\tBurst\tCompletion\tWaiting\tTurnaround")
+    i = 0
+    while i < n:
+        p = processes[i]
+        print("P" + str(p.pid), "\t", p.arrival, "\t", p.burst, "\t", p.completion, "\t\t", p.waiting, "\t", p.turnaround)
+        i += 1
+
+
+
+def input_processes():
+    print("\nEnter number of processes: ", end="")
+    n = int(input())
+    processes = []
+    i = 0
+    while i < n:
+        pid = i + 1
+        print("\nEnter details for Process", pid)
+        print("Arrival Time: ", end="")
+        arrival = int(input())
+        print("Burst Time: ", end="")
+        burst = int(input())
+        p = Process(pid, arrival, burst)
+        processes.insert(i, p)
+        i += 1
+    return processes
+
+
+def main():
+    processes = []
+    quantum = 0
+
+    while True:
+        
+        print(" CPU SCHEDULING MENU ")
+        
+        print("1. Enter Process Data")
+        print("2. Enter Time Quantum")
+        print("3. Apply Round Robin Scheduling")
+        print("4. Exit")
+        
+        print("Enter your choice: ", end="")
+        choice = int(input())
+
+        if choice == 1:
+            processes = input_processes()
+        elif choice == 2:
+            print("Enter Time Quantum: ", end="")
+            quantum = int(input())
+        elif choice == 3:
+            if count_elements(processes) == 0 or quantum == 0:
+                print(" Please enter process data and quantum first.")
+            else:
+                round_robin(processes, quantum)
+        elif choice == 4:
+            print("Exiting program...")
+            break
+        else:
+            print("Invalid choice! Please try again.")
+
+
+
+if __name__ == "__main__":
+    main()
