@@ -1,0 +1,160 @@
+
+
+class Process:
+    def __init__(self, pid, arrival, burst, priority):
+        self.pid = pid
+        self.arrival = arrival
+        self.burst = burst
+        self.priority = priority
+        self.completion = 0
+        self.waiting = 0
+        self.turnaround = 0
+        self.start_time = -1
+
+
+
+def count_elements(arr):
+    c = 0
+    for _ in arr:
+        c += 1
+    return c
+
+
+
+def priority_non_preemptive(processes):
+    n = count_elements(processes)
+    completed = 0
+    current_time = 0
+
+    # Mark all processes incomplete initially
+    is_completed = []
+    i = 0
+    while i < n:
+        is_completed.insert(i, False)
+        i += 1
+
+    gantt = []
+
+    while completed != n:
+        idx = -1
+        best_priority = 999999  # smaller number => higher priority
+        i = 0
+        while i < n:
+            p = processes[i]
+            if p.arrival <= current_time and is_completed[i] == False:
+                if p.priority < best_priority:
+                    best_priority = p.priority
+                    idx = i
+                elif p.priority == best_priority:
+                    # If same priority, earlier arrival gets preference
+                    if idx == -1 or p.arrival < processes[idx].arrival:
+                        idx = i
+            i += 1
+
+        if idx != -1:
+            # CPU executes process
+            p = processes[idx]
+            if p.start_time == -1:
+                p.start_time = current_time
+
+            gantt_length = count_elements(gantt)
+            gantt.insert(gantt_length, p.pid)
+
+            current_time += p.burst
+            p.completion = current_time
+            p.turnaround = p.completion - p.arrival
+            p.waiting = p.turnaround - p.burst
+
+            is_completed[idx] = True
+            completed += 1
+        else:
+            gantt_length = count_elements(gantt)
+            gantt.insert(gantt_length, -1)
+            current_time += 1
+
+    # Display results
+    print("\n PRIORITY SCHEDULING (NON-PREEMPTIVE) ")
+    print("Gantt Chart:")
+    g_len = count_elements(gantt)
+    i = 0
+    while i < g_len:
+        if gantt[i] == -1:
+            print("Idle | ", end="")
+        else:
+            print("P" + str(gantt[i]) + " | ", end="")
+        i += 1
+
+    print("\n\nPID\tArrival\tBurst\tPriority\tCompletion\tWaiting\tTurnaround")
+    i = 0
+    while i < n:
+        p = processes[i]
+        print("P" + str(p.pid), "\t", p.arrival, "\t", p.burst, "\t", p.priority, "\t\t",
+              p.completion, "\t\t", p.waiting, "\t", p.turnaround)
+        i += 1
+
+    # Calculate averages manually
+    total_wait = 0
+    total_turn = 0
+    i = 0
+    while i < n:
+        total_wait = total_wait + processes[i].waiting
+        total_turn = total_turn + processes[i].turnaround
+        i += 1
+
+    avg_wait = total_wait / n
+    avg_turn = total_turn / n
+    print("\nAverage Waiting Time:", round(avg_wait, 2))
+    print("Average Turnaround Time:", round(avg_turn, 2))
+
+
+
+def input_processes():
+    print("\nEnter number of processes: ", end="")
+    n = int(input())
+    processes = []
+    i = 0
+    while i < n:
+        pid = i + 1
+        print("\nEnter details for Process", pid)
+        print("Arrival Time: ", end="")
+        arrival = int(input())
+        print("Burst Time: ", end="")
+        burst = int(input())
+        print("Priority (lower number = higher priority): ", end="")
+        priority = int(input())
+        p = Process(pid, arrival, burst, priority)
+        processes.insert(i, p)
+        i += 1
+    return processes
+
+
+def main():
+    processes = []
+
+    while True:
+      
+        print(" CPU SCHEDULING MENU ")
+        
+        print("1. Enter Process Data")
+        print("2. Apply Priority (Non-Preemptive) Scheduling")
+        print("3. Exit")
+        
+        print("Enter your choice: ", end="")
+        choice = int(input())
+
+        if choice == 1:
+            processes = input_processes()
+        elif choice == 2:
+            if count_elements(processes) == 0:
+                print(" Please enter process data first.")
+            else:
+                priority_non_preemptive(processes)
+        elif choice == 3:
+            print("Exiting program...")
+            break
+        else:
+            print("Invalid choice! Please try again.")
+
+
+if __name__ == "__main__":
+    main()
