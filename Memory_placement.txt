@@ -1,0 +1,245 @@
+def count_elements(arr):
+    c = 0
+    for _ in arr:
+        c += 1
+    return c
+
+
+def copy_array(source):
+    dest = []
+    i = 0
+    while i < count_elements(source):
+        dest.insert(i, source[i])
+        i += 1
+    return dest
+
+
+def input_blocks():
+    print("\nEnter number of memory blocks: ", end="")
+    n = int(input())
+    blocks = []
+    i = 0
+    while i < n:
+        print("Enter size of Block", i + 1, ":", end=" ")
+        size = int(input())
+        blocks.insert(i, size)
+        i += 1
+    return blocks
+
+
+def input_processes():
+    print("\nEnter number of processes: ", end="")
+    n = int(input())
+    processes = []
+    i = 0
+    while i < n:
+        print("Enter size of Process", i + 1, ":", end=" ")
+        size = int(input())
+        processes.insert(i, size)
+        i += 1
+    return processes
+
+
+def display_info(blocks, processes):
+    print("\nMemory Blocks:")
+    i = 0
+    while i < count_elements(blocks):
+        print("Block", i + 1, "=> Size:", blocks[i])
+        i += 1
+
+    print("\nProcesses:")
+    i = 0
+    while i < count_elements(processes):
+        print("Process", i + 1, "=> Size:", processes[i])
+        i += 1
+
+
+def first_fit(blocks, processes):
+    blk_size = count_elements(blocks)
+    pr_size = count_elements(processes)
+    memory = copy_array(blocks)
+
+    print("\n===== FIRST FIT MEMORY ALLOCATION =====\n")
+
+    i = 0
+    while i < pr_size:
+        p = processes[i]
+        allocated = False
+
+        j = 0
+        while j < blk_size:
+            if memory[j] >= p:
+                memory[j] -= p
+                print("Process", p, "allocated to Block", j + 1)
+                allocated = True
+                break
+            j += 1
+
+        if not allocated:
+            print("Process", p, "could not be allocated.")
+
+        i += 1
+
+    print("\nFinal Block Status:")
+    for i in range(blk_size):
+        print("Block", i + 1, "Remaining Size:", memory[i])
+
+
+def best_fit(blocks, processes):
+    blk_size = count_elements(blocks)
+    pr_size = count_elements(processes)
+    memory = copy_array(blocks)
+
+    print("\n===== BEST FIT MEMORY ALLOCATION =====\n")
+
+    i = 0
+    while i < pr_size:
+        p = processes[i]
+        best_index = -1
+        min_waste = 10**9
+
+        j = 0
+        while j < blk_size:
+            waste = memory[j] - p
+            if waste >= 0 and waste < min_waste:
+                min_waste = waste
+                best_index = j
+            j += 1
+
+        if best_index != -1:
+            memory[best_index] -= p
+            print("Process", p, "allocated to Block", best_index + 1)
+        else:
+            print("Process", p, "could not be allocated.")
+
+        i += 1
+
+    print("\nFinal Block Status:")
+    for i in range(blk_size):
+        print("Block", i + 1, "Remaining Size:", memory[i])
+
+
+def worst_fit(blocks, processes):
+    blk_size = count_elements(blocks)
+    pr_size = count_elements(processes)
+    memory = copy_array(blocks)
+
+    print("\n===== WORST FIT MEMORY ALLOCATION =====\n")
+
+    i = 0
+    while i < pr_size:
+        p = processes[i]
+        worst_index = -1
+        max_waste = -1
+
+        j = 0
+        while j < blk_size:
+            waste = memory[j] - p
+            if waste >= 0 and waste > max_waste:
+                max_waste = waste
+                worst_index = j
+            j += 1
+
+        if worst_index != -1:
+            memory[worst_index] -= p
+            print("Process", p, "allocated to Block", worst_index + 1)
+        else:
+            print("Process", p, "could not be allocated.")
+
+        i += 1
+
+    print("\nFinal Block Status:")
+    for i in range(blk_size):
+        print("Block", i + 1, "Remaining Size:", memory[i])
+
+
+def next_fit(blocks, processes):
+    blk_size = count_elements(blocks)
+    pr_size = count_elements(processes)
+    memory = copy_array(blocks)
+
+    print("\n===== NEXT FIT MEMORY ALLOCATION =====\n")
+
+    j = 0
+
+    i = 0
+    while i < pr_size:
+        p = processes[i]
+        allocated = False
+        count = 0
+
+        while count < blk_size:
+            if memory[j] >= p:
+                memory[j] -= p
+                print("Process", p, "allocated to Block", j + 1)
+                j = (j + 1) % blk_size
+                allocated = True
+                break
+
+            j = (j + 1) % blk_size
+            count += 1
+
+        if not allocated:
+            print("Process", p, "could not be allocated.")
+
+        i += 1
+
+    print("\nFinal Block Status:")
+    for i in range(blk_size):
+        print("Block", i + 1, "Remaining Size:", memory[i])
+
+
+def main():
+    blocks = []
+    processes = []
+
+    while True:
+        print("\n==============================")
+        print("    MEMORY ALLOCATION MENU    ")
+        print("==============================")
+        print("1. Enter Memory Blocks")
+        print("2. Enter Processes")
+        print("3. Display Memory and Processes")
+        print("4. First Fit Allocation")
+        print("5. Best Fit Allocation")
+        print("6. Worst Fit Allocation")
+        print("7. Next Fit Allocation")
+        print("8. Exit")
+        print("==============================")
+        print("Enter choice: ", end="")
+        choice = input()
+
+        if choice == '1':
+            blocks = input_blocks()
+
+        elif choice == '2':
+            processes = input_processes()
+
+        elif choice == '3':
+            if not blocks or not processes:
+                print("Enter blocks and processes first!")
+            else:
+                display_info(blocks, processes)
+
+        elif choice == '4':
+            first_fit(blocks, processes)
+
+        elif choice == '5':
+            best_fit(blocks, processes)
+
+        elif choice == '6':
+            worst_fit(blocks, processes)
+
+        elif choice == '7':
+            next_fit(blocks, processes)
+
+        elif choice == '8':
+            print("Exiting...")
+            break
+
+        else:
+            print("Invalid choice. Try again!")
+
+
+if __name__ == "__main__":
+    main()
