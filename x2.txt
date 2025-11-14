@@ -1,0 +1,205 @@
+OPTAB = {
+    "STOP": ("IS", 0, 1),
+    "ADD": ("IS", 1, 1),
+    "SUB": ("IS", 2, 1),
+    "MULT": ("IS", 3, 1),
+    "MOVER": ("IS", 4, 1),
+    "MOVEM": ("IS", 5, 1),
+    "COMP": ("IS", 6, 1),
+    "BC": ("IS", 7, 1),
+    "DIV": ("IS", 8, 1),
+    "READ": ("IS", 9, 1),
+    "PRINT": ("IS", 10, 1),
+
+    "START": ("AD", 1, 0),
+    "END": ("AD", 2, 0),
+    "LTORG": ("AD", 3, 0),
+    "ORIGIN": ("AD", 4, 0),
+    "EQU": ("AD", 5, 0),
+
+    "DC": ("DL", 1, 1),
+    "DS": ("DL", 2, 0)
+}
+
+INTERMEDIATE_CODE = []
+SYMTAB = {}
+LITTAB = []
+POOLTAB = []
+PASS1_DONE = False
+
+MACHINE_CODE = []
+
+def load_pass1_output():
+    global INTERMEDIATE_CODE, SYMTAB, LITTAB, POOLTAB
+
+    print("\nEnter number of Intermediate Code entries:")
+    n = int(input())
+    INTERMEDIATE_CODE = []
+    print("\nEnter IC entries in format:")
+    print("LOC (CLASS,OPCODE) OP1 OP2")
+    print("Example: 100 ('IS',4) ('R',1) ('S',2)")
+
+    for _ in range(n):
+        line = input()
+        INTERMEDIATE_CODE.append(eval(line))  # Safe for controlled input
+
+    print("\nEnter number of SYMTAB entries:")
+    s = int(input())
+    SYMTAB.clear()
+    for _ in range(s):
+        print("Enter: symbol address length index")
+        sym, addr, ln, idx = input().split()
+        SYMTAB[sym] = {"address": int(addr), "length": int(ln), "index": int(idx)}
+
+    print("\nEnter number of LITTAB entries:")
+    l = int(input())
+    LITTAB.clear()
+    for _ in range(l):
+        lit, addr = input().split()
+        LITTAB.append([lit, int(addr)])
+
+    print("\nEnter number of POOLTAB entries:")
+    p = int(input())
+    POOLTAB.clear()
+    for _ in range(p):
+        POOLTAB.append(int(input()))
+
+
+def get_operand_value(op):
+    if op is None:
+        return 0
+
+    t, val = op
+
+    if t == "C":  
+        return val
+
+    if t == "R":  
+        return val
+
+    if t == "S":  
+        for sym, data in SYMTAB.items():
+            if data["index"] == val:
+                return data["address"]
+
+    if t == "L":  
+        return LITTAB[val][1]  
+
+    return 0
+
+
+def perform_pass2():
+    global MACHINE_CODE
+    MACHINE_CODE = []
+
+    for entry in INTERMEDIATE_CODE:
+        loc = entry[0]
+        op_class, opcode = entry[1]
+
+        if op_class == "AD":
+            continue
+
+        if op_class == "DL":
+            if opcode == 1:   
+                const_val = get_operand_value(entry[2])
+                MACHINE_CODE.append((loc, const_val))
+
+            elif opcode == 2: 
+                MACHINE_CODE.append((loc, "----"))
+            continue
+
+        if op_class == "IS":
+            machine_inst = [opcode]
+
+            
+            if len(entry) > 2:
+                op1 = get_operand_value(entry[2])
+            else:
+                op1 = 0
+            machine_inst.append(op1)
+
+            
+            if len(entry) > 3:
+                op2 = get_operand_value(entry[3])
+            else:
+                op2 = 0
+            machine_inst.append(op2)
+
+            MACHINE_CODE.append((loc, machine_inst))
+
+
+def print_pass2_output():
+    print("\n========== MACHINE CODE (PASS-II OUTPUT) ==========")
+    print("LOC\tMachine Instruction")
+    print("--------------------------------------------")
+    for row in MACHINE_CODE:
+        print(row[0], "\t", row[1])
+
+
+def main():
+    global PASS1_DONE
+    while True:
+        print("\n================= PASS-II MENU =================")
+        print("1. Enter Pass-I Output (IC, SYMTAB, LITTAB, POOLTAB)")
+        print("2. Run Pass-II")
+        print("3. Display Machine Code")
+        print("4. Exit")
+        choice = input("Enter choice: ")
+
+        if choice == "1":
+            load_pass1_output()
+            PASS1_DONE = True
+            print("Pass-I output loaded successfully.")
+
+        elif choice == "2":
+            if not PASS1_DONE:
+                print("Error: Load Pass-I output first!")
+                continue
+            perform_pass2()
+            print("Pass-II completed successfully.")
+
+        elif choice == "3":
+            print_pass2_output()
+
+        elif choice == "4":
+            print("Exiting...")
+            break
+
+        else:
+            print("Invalid choice! Try again.")
+
+
+if __name__ == "__main__":
+    main()
+
+
+"""
+( None , ('AD', 1), ('C', 100) )
+(100, ('IS', 4), ('R', 1), ('L', 0))
+(101, ('IS', 1), ('R', 2), ('L', 1))
+(102, ('IS', 2), ('R', 3), ('L', 2))
+(103, ('IS', 5), ('R', 1), ('S', 3))
+(104, ('IS', 9), ('S', 4))
+(105, ('IS', 10), ('S', 5))
+(106, ('IS', 0))
+(107, ('DL', 1), ('C', 5))
+(108, ('DL', 2), ('C', 1))
+(109, ('DL', 2), ('C', 1))
+(110, ('AD', 2))
+
+
+A 107 1 3
+B 108 1 4
+C 109 1 5
+LOOP 100 1 0
+
+
+="5" 110
+="1" 111
+="2" 112
+
+
+0
+3
+
+"""
