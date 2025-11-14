@@ -1,0 +1,142 @@
+
+
+
+
+"""A3.java"""
+import java.io.*;
+import java.util.*;
+class A3 {
+ static {
+ System.loadLibrary("A3");
+ }
+ private native int add(int a, int b); 
+ private native int sub(int a, int b); 
+ private native int mul(int a, int b); 
+ private native int div(int a, int b); 
+ public static void main(String[] args) {
+ Scanner sc = new Scanner(System.in);
+ int a, b;
+ int choice = 0;
+ System.out.print("\nValue of a:\t");
+ a = sc.nextInt();
+ System.out.print("\nValue of b:\t");
+ b = sc.nextInt();
+ while (true) {
+ System.out.println("----- MAIN MENU -----");
+ System.out.println("1 -> Addition");
+ System.out.println("2 -> Subtraction");
+ System.out.println("3 -> Multiplication");
+ System.out.println("4 -> Division");
+ System.out.println("5 -> Exit");
+ System.out.println("Choose an option:\t");
+ choice = sc.nextInt();
+ switch (choice) {
+ case 1:
+ System.out.println("Result: " + new A3().add(a, b));
+ break;
+case 2:
+ System.out.println("Result: " + new A3().sub(a, b));
+ break;
+case 3:
+ System.out.println("Result: " + new A3().mul(a, b));
+ break;
+case 4:
+System.out.println("Result: " + new A3().div(a, b));
+break;
+case 5:
+System.out.println("Exiting...");
+System.exit(0);
+default:
+System.out.println("Please choose a valid option.");
+break;
+ }
+ }
+ }
+}
+
+"""A3.c"""
+#include <jni.h>
+#include <stdio.h>
+#include "A3.h"
+JNIEXPORT jint JNICALL Java_A3_add(JNIEnv *env, jobject obj, jint a, jint b) {
+ jint result = a + b;
+ printf("\n%d + %d = %d\n", a, b, result);
+ return result;
+}
+JNIEXPORT jint JNICALL Java_A3_sub(JNIEnv *env, jobject obj, jint a, jint b) {
+ jint result = a - b;
+ printf("\n%d - %d = %d\n", a, b, result);
+ return result;
+}
+JNIEXPORT jint JNICALL Java_A3_mul(JNIEnv *env, jobject obj, jint a, jint b) {
+ jint result = a * b;
+ printf("\n%d * %d = %d\n", a, b, result);
+ return result;
+}
+JNIEXPORT jint JNICALL Java_A3_div(JNIEnv *env, jobject obj, jint a, jint b) {
+ if (b == 0) {
+ printf("Error: Division by zero.\n");
+ return 0;
+ }
+ jint result = a / b;
+ printf("\n%d / %d = %d\n", a, b, result);
+ return result;
+}
+
+
+"""
+javac A3.java
+
+javah A3
+
+gcc -shared -fPIC -I/usr/lib/jvm/java-8-openjdk-amd64/include -I/usr/lib/jvm/java-8-openjdk-amd64/include/linux A3.c -o libA3.so
+
+java -classpath . -Djava.library.path=. A3
+
+"""
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+
+// create java file:
+
+public class MathOperations {
+    static {
+        System.loadLibrary("MathOps");
+
+    // Declare native methods
+    public native int add(int a, int b);
+    public native int subtract(int a, int b);
+
+    public static void main(String[] args) {
+        MathOperations mo = new MathOperations();
+        System.out.println("5 + 3 = " + mo.add(5, 3));
+        System.out.println("5 - 3 = " + mo.subtract(5, 3));
+    }
+}
+
+//create c++ file:
+#include <jni.h>
+#include "MathOperations.h"
+
+JNIEXPORT jint JNICALL Java_MathOperations_add(JNIEnv* env, jobject obj, jint a, jint b) {
+    return a + b;
+}
+
+JNIEXPORT jint JNICALL Java_MathOperations_subtract(JNIEnv* env, jobject obj, jint a, jint b) {
+    return a - b;
+}
+
+
+"""
+javac MathOperations.java
+
+javac -h . MathOperations.java
+
+g++ -fPIC -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/Linux" -shared -o libMathOps.so MathOps.cpp
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+export LD_LIBRARY_PATH=.
+
+"""
