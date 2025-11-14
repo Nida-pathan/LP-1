@@ -1,0 +1,385 @@
+
+
+def _manual_str(n):
+    
+    if n == 0:
+        return "0"
+    
+    digits = "0123456789"
+    result = ""
+    
+    
+
+    while n > 0:
+        remainder = n % 10
+        result = digits[remainder] + result
+        n = n // 10 # Integer division
+        
+    return result
+
+def _manual_strip(line):
+    
+    whitespace = [' ', '\t', '\n']
+    
+    start_index = 0
+    line_len = _get_len(line)
+    
+    while start_index < line_len:
+        is_whitespace = False
+        for char in whitespace:
+            if line[start_index] == char:
+                is_whitespace = True
+                break
+        if not is_whitespace:
+            break
+        start_index += 1
+        
+    end_index = line_len - 1
+    while end_index >= start_index:
+        is_whitespace = False
+        for char in whitespace:
+            if line[end_index] == char:
+                is_whitespace = True
+                break
+        if not is_whitespace:
+            break
+        end_index -= 1
+        
+    if end_index < start_index:
+        return ""
+    return line[start_index : end_index + 1]
+
+def _manual_split(line):
+   
+
+    delimiters = [' ', ',']
+    parts = []
+    current_part = ""
+    
+    i = 0
+    line_len = _get_len(line)
+    
+    while i < line_len:
+        char = line[i]
+        
+        is_delimiter = False
+        for d in delimiters:
+            if char == d:
+                is_delimiter = True
+                break
+        
+        if is_delimiter:
+            if _get_len(current_part) > 0:
+                parts.append(current_part)
+                current_part = ""
+        else:
+            current_part += char
+        i += 1
+        
+    if _get_len(current_part) > 0:
+        parts.append(current_part)
+        
+    return parts
+
+def _manual_replace(original_string, old_sub, new_sub):
+   
+    if _get_len(old_sub) == 0:
+        return original_string
+        
+    result = ""
+    i = 0
+    len_original = _get_len(original_string)
+    len_old = _get_len(old_sub)
+    
+    while i < len_original:
+        if i <= len_original - len_old:
+            match = True
+            j = 0
+            while j < len_old:
+                if original_string[i+j] != old_sub[j]:
+                    match = False
+                    break
+                j += 1
+            
+            if match:
+                result += new_sub
+                i += len_old
+            else:
+                result += original_string[i]
+                i += 1
+        else:
+            result += original_string[i]
+            i += 1
+            
+    return result
+
+def _get_len(iterable):
+    
+    count = 0
+    for _ in iterable:
+        count += 1
+    return count
+
+def _manual_int(s):
+    
+    s_clean = _manual_strip(s)
+    number = 0
+    digits_str = "0123456789"
+    
+    for char_s in s_clean:
+        digit_val = -1
+        j = 0
+        for char_d in digits_str:
+            if char_s == char_d:
+                digit_val = j
+                break
+            j += 1
+            
+        if digit_val == -1:
+            print("Error: Invalid number provided.")
+            return 0 # Return 0 on error
+            
+        number = (number * 10) + digit_val
+    return number
+
+
+
+
+class PassII:
+  
+    def __init__(self, mnt, mdt):
+        
+        self.mnt = mnt
+        self.mdt = mdt
+        print("--- Pass-II Processor Initialized ---")
+
+    def _find_in_mnt(self, macro_name):
+        
+        for entry in self.mnt:
+            if entry[0] == macro_name:
+                return entry[1]  # Return the MDT index
+        return -1
+
+    def process(self, intermediate_code):
+        
+        final_code = []
+        print("--- Processing Intermediate Code ---")
+
+        for line in intermediate_code:
+            cleaned_line = _manual_strip(line)
+            
+            if _get_len(cleaned_line) == 0:
+                continue
+
+            parts = _manual_split(cleaned_line)
+            
+            if _get_len(parts) == 0:
+                continue
+                
+            opcode = parts[0]
+            mdt_index = self._find_in_mnt(opcode)
+
+            if mdt_index != -1:
+                
+                print("Macro Call Found:", cleaned_line)
+                
+                actual_args = parts[1:]
+                
+                prototype_line = self.mdt[mdt_index]
+                proto_parts = _manual_split(_manual_strip(prototype_line))
+                formal_params = proto_parts[1:]
+                
+                
+                ala = []
+                param_count = _get_len(formal_params)
+                
+                i = 0
+                while i < param_count:
+                    ala.append([formal_params[i], actual_args[i]])
+                    i += 1
+                
+                
+                print("  Building ALA:")
+                for pair in ala:
+                    print("    ", pair[0], "->", pair[1])
+
+                
+                mdt_index += 1 # Move to the first line *after* prototype
+                
+                while True:
+                    mdt_line = self.mdt[mdt_index]
+                    cleaned_mdt_line = _manual_strip(mdt_line)
+                    
+                    if cleaned_mdt_line == 'MEND':
+                        print("  End of macro definition reached.")
+                        break
+                        
+                    
+                    expanded_line = cleaned_mdt_line
+                    for param_pair in ala:
+                        formal = param_pair[0]
+                        actual = param_pair[1]
+                        expanded_line = _manual_replace(expanded_line, formal, actual)
+                    
+                    print("  Expanding:", cleaned_mdt_line, "->", expanded_line)
+                    final_code.append(expanded_line)
+                    mdt_index += 1
+                
+            else:
+                
+                final_code.append(cleaned_line)
+                
+        print("--- Processing Complete ---")
+        return final_code
+
+
+
+def enter_mnt():
+    
+    mnt_data = []
+    print("\n--- Enter MNT ---")
+    print("Enter one entry per line (e.g., INCR 0)")
+    print("Enter 'DONE' when finished.")
+    while True:
+        line = input("MNT> ")
+        cleaned_line = _manual_strip(line)
+        
+        if cleaned_line == 'DONE':
+            break
+        
+        parts = _manual_split(cleaned_line)
+        if _get_len(parts) == 2:
+            name = parts[0]
+            index = _manual_int(parts[1])
+            mnt_data.append([name, index])
+            print("  Added:", name, index)
+        else:
+            print("  Error: Invalid format. Use: macro_name index")
+    return mnt_data
+
+def enter_mdt():
+    
+    mdt_data = []
+    print("\n--- Enter MDT ---")
+    print("Enter one line at a time (e.g., INCR &ARG1, &ARG2)")
+    print("Enter 'DONE' when finished.")
+    line_num = 0
+    while True:
+        # Replaced str() with _manual_str() and removed redundant _manual_strip()
+        line_num_str = _manual_str(line_num)
+        prompt = _manual_replace("MDT[ ]> ", " ", line_num_str)
+        line = input(prompt)
+        
+        if _manual_strip(line) == 'DONE':
+            break
+        
+        mdt_data.append(line) # Keep original line with whitespace
+        line_num += 1
+    return mdt_data
+
+def enter_intermediate_code():
+    
+    code_data = []
+    print("\n--- Enter Intermediate Code ---")
+    print("Enter one line at a time (e.g., START 100)")
+    print("Enter 'DONE' when finished.")
+    while True:
+        line = input("CODE> ")
+        
+        if _manual_strip(line) == 'DONE':
+            break
+            
+        code_data.append(line)
+    return code_data
+
+def print_menu():
+    
+    print("\n--- Macro Processor Pass-II Menu ---")
+    print("1. Enter MNT (Macro Name Table)")
+    print("2. Enter MDT (Macro Definition Table)")
+    print("3. Enter Intermediate Code")
+    print("4. Run Pass-II Processor")
+    print("5. Exit")
+
+
+def main():
+        
+    mnt_data = []
+    mdt_data = []
+    code_data = []
+
+    while True:
+        print_menu()
+        choice = _manual_strip(input("Enter choice (1-5): "))
+        
+        if choice == '1':
+            mnt_data = enter_mnt()
+            print("MNT Updated:", mnt_data) # print() can handle lists
+            
+        elif choice == '2':
+            mdt_data = enter_mdt()
+            
+            print("MDT Updated. Total lines:", _manual_str(_get_len(mdt_data)))
+            
+        elif choice == '3':
+            code_data = enter_intermediate_code()
+            
+            print("Code Updated. Total lines:", _manual_str(_get_len(code_data)))
+            
+        elif choice == '4':
+            if _get_len(mnt_data) == 0 or _get_len(mdt_data) == 0 or _get_len(code_data) == 0:
+                print("\n** ERROR: MNT, MDT, and Code must all be entered before running. **")
+            else:
+                processor = PassII(mnt=mnt_data, mdt=mdt_data)
+                final_code = processor.process(intermediate_code=code_data)
+                
+                print("\n--- Final Expanded Code Output ---")
+                for line in final_code:
+                    print(line)
+                    
+        elif choice == '5':
+            print("Exiting.")
+            break
+            
+        else:
+            print("Invalid choice. Please enter a number from 1 to 5.")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+"""
+--- Enter MNT ---
+INCR 0
+ADD5 5
+DONE
+
+--- Enter MDT ---
+INCR &ARG1, &ARG2
+MOVER AREG, &ARG1
+ADD AREG, &ARG2
+MOVEM AREG, &ARG1
+MEND
+ADD5 &X
+MOVER BREG, &X
+ADD BREG, ='5'
+MOVEM BREG, &X
+MEND
+DONE
+
+--- Enter Intermediate Code ---
+START 100
+INCR DATA1, DATA2
+MOVER CREG, DATA1
+ADD5 DATA3
+DATA1 DS 1
+DATA2 DS 1
+DATA3 DS 1
+END
+DONE
+
+"""
+  
