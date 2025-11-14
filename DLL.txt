@@ -101,6 +101,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 
 // create java file:
+//MathOperations.java
 
 public class MathOperations {
     static {
@@ -118,6 +119,7 @@ public class MathOperations {
 }
 
 //create c++ file:
+//MathOps.cpp
 #include <jni.h>
 #include "MathOperations.h"
 
