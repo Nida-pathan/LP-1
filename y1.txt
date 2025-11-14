@@ -1,0 +1,244 @@
+
+MNT = {}
+MDT = []
+ALA = {}
+
+
+
+def trim_spaces(line):
+    
+    start = 0
+    end = len(line) - 1
+
+    
+    while start < len(line) and (line[start] == ' ' or line[start] == '\t' or line[start] == '\n'):
+        start += 1
+    
+    
+    while end >= 0 and (line[end] == ' ' or line[end] == '\t' or line[end] == '\n'):
+        end -= 1
+
+    if start <= end:
+        return line[start:end + 1]
+    else:
+        
+        return ""
+
+
+def manual_split(line):
+    
+    tokens = []
+    current = ""
+    i = 0
+    while i < len(line):
+        ch = line[i]
+        # Delimiters
+        if ch == ' ' or ch == '\t' or ch == ',':
+            if current != "":
+                tokens.append(current)
+                current = ""
+        else:
+            # Part of a token
+            current += ch
+        i += 1
+    
+    
+    if current != "":
+        tokens.append(current)
+    return tokens
+
+
+def starts_with_ampersand(token):
+    
+    if len(token) == 0:
+        return False
+    return token[0] == '&'
+
+
+def replace_argument(line, old, new):
+    
+    result = ""
+    i = 0
+    while i < len(line):
+        match = True
+        j = 0
+        
+        while j < len(old) and i + j < len(line) and line[i + j] == old[j]:
+            j += 1
+        
+        if j == len(old):
+            result += new
+            i += len(old)
+        else:
+            
+            result += line[i]
+            i += 1
+    return result
+
+
+
+def process_pass1(source_code):
+    
+    global MNT, MDT, ALA  
+    
+    inside_macro = False
+    current_macro_name = None
+    MDT_index = 0
+
+    line_num = 0
+    while line_num < len(source_code):
+        line = trim_spaces(source_code[line_num])
+        tokens = manual_split(line)
+        
+        if len(tokens) == 0:
+            
+            line_num += 1
+            continue
+
+        if tokens[0] == "MACRO":
+            
+            inside_macro = True
+            line_num += 1
+            continue
+
+        if tokens[0] == "MEND":
+            
+            MDT.append("MEND")
+            inside_macro = False
+            current_macro_name = None
+            MDT_index += 1
+            line_num += 1
+            continue
+
+        if inside_macro:
+            if current_macro_name is None:
+                
+                current_macro_name = tokens[0]
+                MNT[current_macro_name] = MDT_index
+
+                
+                params = []
+                idx = 1
+                while idx < len(tokens):
+                    if starts_with_ampersand(tokens[idx]):
+                        params.append(tokens[idx])
+                    idx += 1
+                
+                ALA[current_macro_name] = params
+                line_num += 1
+                continue
+            
+            
+            modified_line = line
+            arg_index = 0
+            
+            while arg_index < len(ALA[current_macro_name]):
+                arg = ALA[current_macro_name][arg_index]
+                placeholder = "#" + str(arg_index + 1)
+                modified_line = replace_argument(modified_line, arg, placeholder)
+                arg_index += 1
+
+            MDT.append(modified_line)
+            MDT_index += 1
+
+        
+        line_num += 1
+
+
+def display_pass1():
+  
+    print("\n---------------------------")
+    print("PASS-I OUTPUT")
+    print("---------------------------")
+
+    print("\nMacro Name Table (MNT):")
+    print("---------------------------")
+    if not MNT:
+        print("(Empty)")
+    else:
+        print(f"{'Macro Name':<15} | {'MDT Index':<10}")
+        print("-" * 27)
+        for name in MNT:
+            print(f"{name:<15} | {MNT[name]:<10}")
+
+    print("\nArgument List Array (ALA):")
+    print("---------------------------")
+    if not ALA:
+        print("(Empty)")
+    else:
+        for name in ALA:
+            print(f"{name}: {', '.join(ALA[name]) if ALA[name] else '(No Arguments)'}")
+
+    print("\nMacro Definition Table (MDT):")
+    print("---------------------------")
+    if not MDT:
+        print("(Empty)")
+    else:
+        i = 0
+        while i < len(MDT):
+            print(f"({i:02}) {MDT[i]}")
+            i += 1
+    
+    print("\n---------------------------")
+
+
+
+def main():
+    
+    source_code = []
+    print("--- Pass-I Macro Processor Input ---")
+    print("Enter your source code line by line.")
+    print("Example:")
+    print("MACRO")
+    print("INCR &ARG1")
+    print("ADD &ARG1, ONE")
+    print("MEND")
+    print("START")
+    print("END")
+    print("\nType 'DONE' (in all caps) on a new line when you are finished.")
+    print("--------------------------------------")
+
+    while True:
+        try:
+           
+            line = input()
+            
+            if line == "DONE":
+                break
+            
+            source_code.append(line)
+        except EOFError:
+            
+            break
+    
+    print("\n...Input received. Processing Pass-I...")
+    
+    
+    process_pass1(source_code)
+    
+    
+    display_pass1()
+
+
+if __name__ == "__main__":
+    main()
+
+
+"""
+MACRO
+INCR &FIRST, &SECOND
+ADD &FIRST, ONE
+ADD &SECOND, TWO
+MEND
+MACRO
+SWAP &A, &B
+MOV REG, &A
+MOV &A, &B
+MOV &B, REG
+MEND
+START
+INCR A, B
+SWAP C, D
+END
+DONE
+"""
